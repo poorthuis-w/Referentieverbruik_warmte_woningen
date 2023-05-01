@@ -1,0 +1,10 @@
+﻿Omschrijving;code;koken;warm tapwater(basis);warm tapwater (piek);ruimteverwarming (basis);ruimteverwarming (piek)
+aardgas;aaa;gasfornuis;HR;HR;HR;HR
+aardgas elektrisch koken;eaa;inductie;HR;HR;HR;HR
+elektriciteit;eee;inductie;eWP_lw;eWP_lw;eWP_lw;eWP_lw
+hwp elektrisch koken;hwpe;inductie;hHR;hHR;BasisHWP_w;hHR
+hwp aardgas koken;hwpa;gasfornuis;hHR;hHR;BasisHWP_w;hHR
+Warmtenet aardgas koken;aww;gasfornuis;gebiedsoptie;gebiedsoptie;gebiedsoptie;gebiedsoptie
+Warmtenet elektrisch koken;eww;inductie;gebiedsoptie;gebiedsoptie;gebiedsoptie;gebiedsoptie
+Individueel gasloos;ebb;inductie;eBoiler;eBoiler;Pellet;Pellet
+voorbeeld_1;vb1;inductie;eWP_lw;eWP_lw;eWP_lw;dummy

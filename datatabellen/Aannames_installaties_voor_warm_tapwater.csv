@@ -1,0 +1,16 @@
+﻿Installatie_name;schillabel_name;ProductType_name;AS_Name;Input_name;P_vol;P_cap;SPF_b;SPF_p;eEffect_cap
+aangepast;x;TW;geen;geen;0.5;0.5;1;1;0
+Bioketel;x;TW;geen;biomassa;0.7;0.6;0.87;0.87;0.014
+Doorstroom;x;TW;geen;elektriciteit;0.7;0.6;0.95;0.95;0
+eBoiler;x;TW;geen;elektriciteit;1;1;0.95;0.95;0
+eWP_bw;x;TW;geen;elektriciteit;0.9;0.8;3;3;0
+eWP_ll;x;TW;geen;elektriciteit;0.9;0.8;2.3;2.3;0
+eWP_lw;x;TW;geen;elektriciteit;0.9;0.8;1.75;1.75;0
+gebiedsoptie;x;TW;geen;geen;0.5;0.5;1;1;0
+geen;x;TW;geen;geen;0.5;0.5;1;1;0
+H2R;x;TW;geen;waterstof;0.7;0.6;0.72;0.72;0.014
+hHR;x;TW;MTAS;gas;0.7;0.6;0.72;0.72;0.014
+HR;x;TW;MTAS;gas;0.7;0.6;0.72;0.72;0.014
+mWKK;x;TW;geen;gas;0.7;0.6;0.72;0.72;0
+niks;x;TW;geen;geen;0.5;0.5;1;1;0
+VR;x;TW;MTAS;gas;0.7;0.6;0.72;0.72;0.014
