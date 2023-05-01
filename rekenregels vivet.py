@@ -33,7 +33,7 @@ def inlezen_gemeentedata(path, GM_codes):
     Moet nog gegeneraliseerd worden voor alle bestadnen, maar voor ontwikkeling wordt een enkele gemeente gebruikt.
     '''
     
-    if GM_codes == ['NL']:
+    if GM_codes == ['alle_inputdata']:
         gemeentedata_path = os.path.join(path,'gemeente_inputdata', '*.csv')
 
         gemeente_files = glob.glob(gemeentedata_path)
@@ -511,7 +511,7 @@ if __name__ == "__main__":
     start_time = time.time()
     
     path = os.getcwd()
-    GM_codes = ['GM0088'] # Mogelijkheid tot opgeven meerdere gemeentecodes in lijst. gebruik ['NL'] voor alle gemeentes in inputadata map.
+    GM_codes = ['GM0088'] # Mogelijkheid tot opgeven meerdere gemeentecodes in lijst. gebruik ['alle_inputdata'] voor alle gemeentes in inputadata map.
     behoud_nullen_excel_parameter = True # Wanneer excel de output inleest verwdijnen de leading zeros bij de geemntedoce en de wijkcode. Met deze parameter blijven deze behouden, als maken ze de csv voor andere toepassingen minder bruikbaar.
     
     # Inlezen data
@@ -547,6 +547,7 @@ if __name__ == "__main__":
     df_output = bereken_metervraag_totalen(df_output)
     metervraag_berekend_time = time.time()
     print('Metervragen berekend. Tijdsduur:', round(metervraag_berekend_time - functionele_vraag_berekend_time,2) ,'s')
+    
     # Invoegen installatieparameters
     installatieparamters_hernoeming_dict = {'Woning/vbo_id' : 'Woning/vbo_id',
                                             'P_vol_TW_b'    : 'Installatietype/Warm tapwater aandeel basis',
@@ -557,7 +558,6 @@ if __name__ == "__main__":
                                             'SPF_b_RV_b'    : 'Installatie-efficientie/ruimteverwarming basis',
                                             'SPF_p_RV_p'    : 'Installatie-efficientie/ruimteverwarming piek'}
     df_output = invoegen_installatie_parameters(df_output, installatie_parameters[installatieparamters_hernoeming_dict.keys()].rename(columns=installatieparamters_hernoeming_dict))
-
 
     # Klaar maken voor output en wegschrijven naar csv
     wegschrijven_naar_csv(df_output, path, GM_codes)
