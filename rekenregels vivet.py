@@ -89,7 +89,7 @@ def definieer_constanten():
     'vermogen_kW_op_een_kwart_van_functionele_vraag_GJ'       : 0.25,
     'vermogen_installatie_warm_tapwater_eengezinswoning_KW'   : 4,
     'vermogen_installatie_warm_tapwater_meergezinswoning_KW'  : 2,
-    'standaard_jaarverbruik_correctie'                        : 0.92,
+    'standaard_jaarverbruik_correctie'                        : 0.918979578314703,
     'bandbreedte_aangevulde_waarden_m3_aardgas'               : 1500
     }
     
@@ -136,7 +136,6 @@ def bereken_huishoudgrootte(df_output, datatabel_1, datatabel_2):
     
     res = df_output.merge(datatabel_1, how='left', on=['Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/eigendom', 'Woningkenmerken/schillabel'])
     res =       res.merge(datatabel_2, how='left', on=['Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/eigendom'                              ])
-
     huishoudgrootte_1 = res['Woningkenmerken/oppervlakte'] * res['RE_OA_a_1'] + res['RE_OA_b_1']
     huishoudgrootte_2 = res['Woningkenmerken/oppervlakte'] * res['RE_OA_a_2'] + res['RE_OA_b_2']
     
@@ -251,9 +250,20 @@ def bepaal_installatiecode(df_gemeentedata, datatabel):
         
     return res.loc[:, 'code']
 
+def bereken_functionele_vraag(df_output, benodigde_woningkenmerken):
+
+    df_output['Aantal bewoners/Aantal bewoners']    = bereken_huishoudgrootte(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_aantal_bewoners_populatie_1a_1b'], brondata_dict['Kentallen_aantal_bewoners_populatie_2'])
+    df_output['Functionele vraag/koken']            = bereken_functionele_vraag_koken(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_koken'])
+    df_output['Functionele vraag/warm tapwater']    = bereken_functionele_vraag_warm_tapwater(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_warm_tapwater'])
+    df_output['Functionele vraag/ruimteverwarming'] = bereken_functionele_vraag_ruimteverwarming(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_ruimteverwarming_populatie_1a'], brondata_dict['Kentallen_ruimteverwarming_populatie_1b'], brondata_dict['Kentallen_ruimteverwarming_populatie_2'])
+    df_output['Functionele vraag/Totaal']           = df_output['Functionele vraag/koken'] + df_output['Functionele vraag/warm tapwater'] + df_output['Functionele vraag/ruimteverwarming']  
+    # Predictieinterval laat ik nog even. Eerst uitleg van Boris en lezen van documentatie
+
+    return df_output
+
 def bepaal_installatie_parameters(df_output, datatabel_installatiecodes, datatabel_ruimteverwarming, datatabel_warm_tapwater, datatabel_koken):
     '''
-    Maakt dataframe met instalaltieparameters
+    Maakt dataframe met installatieparameters
     '''
     variabelen_TW_RV = ['Installatie_name', 'AS_Name', 'Input_name', 'P_vol', 'P_cap', 'SPF_b', 'SPF_p', 'eEffect_cap', 'schillabel_name']
     variabelen_KK    = ['Installatie_name', 'Input_name', 'SPF']
@@ -528,12 +538,7 @@ if __name__ == "__main__":
 
     # Functionele vraag
     benodigde_woningkenmerken_functionele_vraag = ['Woning/vbo_id', 'Woningkenmerken/oppervlakte','Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/bouwjaar', 'Woningkenmerken/eigendom', 'Woningkenmerken/schillabel', 'Aantal bewoners/Aantal bewoners', 'Functionele vraag/Lokale praktijkfactor', 'Regionale klimaatcorrectie/regionale klimaatcorrectie']
-    df_output['Aantal bewoners/Aantal bewoners']    = bereken_huishoudgrootte(df_output.loc[:,benodigde_woningkenmerken_functionele_vraag], brondata_dict['Kentallen_aantal_bewoners_populatie_1a_1b'], brondata_dict['Kentallen_aantal_bewoners_populatie_2'])
-    df_output['Functionele vraag/koken']            = bereken_functionele_vraag_koken(df_output.loc[:,benodigde_woningkenmerken_functionele_vraag], brondata_dict['Kentallen_koken'])
-    df_output['Functionele vraag/warm tapwater']    = bereken_functionele_vraag_warm_tapwater(df_output.loc[:,benodigde_woningkenmerken_functionele_vraag], brondata_dict['Kentallen_warm_tapwater'])
-    df_output['Functionele vraag/ruimteverwarming'] = bereken_functionele_vraag_ruimteverwarming(df_output.loc[:,benodigde_woningkenmerken_functionele_vraag], brondata_dict['Kentallen_ruimteverwarming_populatie_1a'], brondata_dict['Kentallen_ruimteverwarming_populatie_1b'], brondata_dict['Kentallen_ruimteverwarming_populatie_2'])
-    df_output['Functionele vraag/Totaal']           = df_output['Functionele vraag/koken'] + df_output['Functionele vraag/warm tapwater'] + df_output['Functionele vraag/ruimteverwarming']  
-    # Predictieinterval laat ik nog even. Eerst uitleg van Boris en lezen van documentatie
+    df_output = bereken_functionele_vraag(df_output, benodigde_woningkenmerken_functionele_vraag)
     functionele_vraag_berekend_time = time.time()
     print('Functionele vraag berekend. Tijdsduur:', round(functionele_vraag_berekend_time - data_ingelezen_time,2) ,'s')
 
