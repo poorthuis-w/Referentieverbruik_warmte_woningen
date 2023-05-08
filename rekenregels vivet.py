@@ -133,7 +133,9 @@ def overnemen_basisdata(df_input, df_output):
     return df_output
 
 def bereken_functionele_vraag(df_output, benodigde_woningkenmerken):
-
+    '''
+    Geeft structuur voor het berekenen van de functionele vraag
+    '''
     df_output['Aantal bewoners/Aantal bewoners']    = bereken_huishoudgrootte(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_aantal_bewoners_populatie_1a_1b'], brondata_dict['Kentallen_aantal_bewoners_populatie_2'])
     df_output['Functionele vraag/koken']            = bereken_functionele_vraag_koken(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_koken'])
     df_output['Functionele vraag/warm tapwater']    = bereken_functionele_vraag_warm_tapwater(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_warm_tapwater'])
@@ -145,6 +147,9 @@ def bereken_functionele_vraag(df_output, benodigde_woningkenmerken):
     return df_output
 
 def functionele_vraag_bij_datagebrek(df_output):
+    '''
+    Plaatst NaN waarden bij functionele vraag als woningtype niet bekend is.
+    '''
     woningen_met_onbekende_woningkenmerken = df_output['Woningkenmerken/woningtype'] == 9999
     df_output.loc[woningen_met_onbekende_woningkenmerken,'Functionele vraag/koken'] = float("nan")
     df_output.loc[woningen_met_onbekende_woningkenmerken,'Functionele vraag/warm tapwater'] = float("nan")
@@ -236,7 +241,7 @@ def bereken_functionele_vraag_ruimteverwarming(df_output, datatabel_1a, datatabe
 
 def categoriseer_bouwjaarklasse_TNO(bouwjaar):
     '''
-    Catgeoriseert bouwjaar naar TNO bouwjaarklasse. Op het moment handmatig, in de toekomst obv ingelezen dataframe
+    Categoriseert bouwjaar naar TNO bouwjaarklasse.
     '''
     conditions = [
         (bouwjaar <= 1930),
@@ -252,7 +257,7 @@ def categoriseer_bouwjaarklasse_TNO(bouwjaar):
 
 def categoriseer_oppervlakteklasse_TNO(oppervlakte):
     '''
-    Categoriseert oppervlakte naar TNO oppervlakteklasse. Op het moment handmatig, in de toekomst obv ingelezen dataframe
+    Categoriseert oppervlakte naar TNO oppervlakteklasse.
     '''
     conditions = [
         (oppervlakte <= 75),
@@ -478,16 +483,15 @@ def invoegen_installatie_parameters(df_output, installatie_parameters):
     return df_output
 
 def downcast(df):
-    df.info(memory_usage = "deep")
-
-    ## downcasting loop
+    '''
+    Downcasten van variabelen om grootte dataset te verkleinen voor wegschrijven
+    https://towardsdatascience.com/how-to-reduce-the-size-of-a-pandas-dataframe-in-python-7ed6e4269f88
+    '''
     for column in df:
         if df[column].dtype == 'float64':
             df[column]=pd.to_numeric(df[column], downcast='float')
         if df[column].dtype == 'int64':
             df[column]=pd.to_numeric(df[column], downcast='integer')
-    
-    df.info(memory_usage = "deep")
 
     return df
 
@@ -544,12 +548,15 @@ def wegschrijven_per_gemeente(df_output, output_path):
             gemeentecode_name = int(re.findall(r'\d+', gemeentecode)[0])
         gemeentecode_name = str(gemeentecode_name).zfill(4)
 
-        df_gemeente.to_csv(os.path.join(output_path, f'GM{gemeentecode_name}.csv'), sep=';', chunksize=1000)
+        df_gemeente.to_csv(os.path.join(output_path, f'GM{gemeentecode_name}.csv'), sep=';', chunksize=100000)
   
 def wegschrijven_in_een_bestand(df_output, output_path, GM_code):
+    '''
+    Schrijft output dataframe weg naar een enkel .csv bestand.
+    '''
     gemeentecode_name = '_'.join(GM_code)
     
-    df_output.to_csv(os.path.join(output_path, f'{gemeentecode_name}.csv'), sep=';', chunksize=1000)
+    df_output.to_csv(os.path.join(output_path, f'{gemeentecode_name}.csv'), sep=';', chunksize=100000)
 
 
 def get_keys(dictionary):
