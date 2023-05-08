@@ -2,7 +2,7 @@
 """
 Created on Thu Apr 13 13:43:48 2023
 
-@author: poorthuisw
+@author: Wessel Poorthuis, PBL
 """
 
 output_variabelen_dict = {

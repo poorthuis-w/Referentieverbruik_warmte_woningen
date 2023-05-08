@@ -2,35 +2,28 @@
 """
 Created on Wed Apr 12 09:15:33 2023
 
-@author: poorthuisw
+@author: Wessel Poorthuis, PBL
 """
 # Reset parameters tussen python runs in Spyder
 from IPython import get_ipython
 get_ipython().run_line_magic('reset', '-sf')
-
-# Notes to self
-# met energielabel gebruik populatie 1a, zonder label populatie 2
-# enige uitzodnering is ruimteverwarming vrijstaande woningen. Daarvoor populatie 1b
-# Huishoudgrootte komt nog niet helemaal overeen met excel. Afronding?
-
-# Vragen aan Boris
-# Waarom wordt bij het berekenen van de Fvraag voor koken en warm tapwater soms wel en soms niet de lokale praktijkfactor meegenomen? 
-# Hoe werkt het Fvraag predictieinterval?
-
-
+#%%
 # Import modules
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import os
 import pandas as pd
 import numpy as np
 import glob
 import time
+import re
 
 from outputvariabelen import output_variabelen_dict
 
 def inlezen_gemeentedata(path, GM_codes):
     '''
     Leest gemeentedatabestanden in als dataframe. 
-    Moet nog gegeneraliseerd worden voor alle bestadnen, maar voor ontwikkeling wordt een enkele gemeente gebruikt.
     '''
     
     if GM_codes == ['alle_inputdata']:
@@ -56,6 +49,19 @@ def inlezen_gemeentedata(path, GM_codes):
     
     return df
 
+def datavoorbereiding_niet_ingevulde_velden(df_in):
+    '''
+    Geeft dummywaarden aan onbekende woningkenmerken
+    '''
+    
+    df_in['W'].fillna(9999, inplace=True)
+    df_in['B'].fillna(9999, inplace=True)
+    df_in['E'].fillna(9999, inplace=True)
+    df_in['bouwjaar'].fillna(9999, inplace=True)
+    
+    
+    return df_in
+
 def inlezen_brondata(path):
     '''
     Leest csv's met brondata in als dataframes en zet deze in een dictionary
@@ -68,7 +74,7 @@ def inlezen_brondata(path):
         naam = maak_dict_naam(brondatabestand)
         df = pd.read_csv(os.path.join(brondata_path, brondatabestand), sep=';') 
         brondata_dict[naam] = df
-
+    
     return brondata_dict
 
 def maak_dict_naam(volledige_locatie_string):
@@ -113,17 +119,38 @@ def overnemen_basisdata(df_input, df_output):
     df_output['Regio/wijk']                  = df_input['BU_CODE'].str.slice(start=3, stop=9)
     df_output['Regio/buurtcode']             = df_input['BU_CODE']
     df_output['Woningkenmerken/Kenmerken']   = df_input['TBE_string']
-    df_output['Woningkenmerken/woningtype']  = df_input['W']
-    df_output['Woningkenmerken/bouwperiode'] = df_input['B']
-    df_output['Woningkenmerken/bouwjaar']    = df_input['bouwjaar']
+    df_output['Woningkenmerken/woningtype']  = df_input['W'].astype(int)
+    df_output['Woningkenmerken/bouwperiode'] = df_input['B'].astype(int)
+    df_output['Woningkenmerken/bouwjaar']    = df_input['bouwjaar'].astype(int)
     df_output['Woningkenmerken/schillabel']  = df_input['energielabel']
     df_output['Woningkenmerken/labeldatum']  = df_input['labeldatum']
-    df_output['Woningkenmerken/eigendom']    = df_input['E']
-    df_output['Woningkenmerken/oppervlakte'] = df_input['Oppervlak [m^2]']
+    df_output['Woningkenmerken/eigendom']    = df_input['E'].astype(int)
+    df_output['Woningkenmerken/oppervlakte'] = df_input['Oppervlak [m^2]'].astype(int)
 
     df_output['Functionele vraag/Lokale praktijkfactor'] = df_input['lokale praktijkfactor']
     df_output['Regionale klimaatcorrectie/regionale klimaatcorrectie'] = df_input['klimaatfactor']
         
+    return df_output
+
+def bereken_functionele_vraag(df_output, benodigde_woningkenmerken):
+
+    df_output['Aantal bewoners/Aantal bewoners']    = bereken_huishoudgrootte(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_aantal_bewoners_populatie_1a_1b'], brondata_dict['Kentallen_aantal_bewoners_populatie_2'])
+    df_output['Functionele vraag/koken']            = bereken_functionele_vraag_koken(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_koken'])
+    df_output['Functionele vraag/warm tapwater']    = bereken_functionele_vraag_warm_tapwater(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_warm_tapwater'])
+    df_output['Functionele vraag/ruimteverwarming'] = bereken_functionele_vraag_ruimteverwarming(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_ruimteverwarming_populatie_1a'], brondata_dict['Kentallen_ruimteverwarming_populatie_1b'], brondata_dict['Kentallen_ruimteverwarming_populatie_2'])
+    df_output['Functionele vraag/Totaal']           = df_output['Functionele vraag/koken'] + df_output['Functionele vraag/warm tapwater'] + df_output['Functionele vraag/ruimteverwarming']  
+    df_output = functionele_vraag_bij_datagebrek(df_output)
+    # Predictieinterval is een todo
+
+    return df_output
+
+def functionele_vraag_bij_datagebrek(df_output):
+    woningen_met_onbekende_woningkenmerken = df_output['Woningkenmerken/woningtype'] == 9999
+    df_output.loc[woningen_met_onbekende_woningkenmerken,'Functionele vraag/koken'] = float("nan")
+    df_output.loc[woningen_met_onbekende_woningkenmerken,'Functionele vraag/warm tapwater'] = float("nan")
+    df_output.loc[woningen_met_onbekende_woningkenmerken,'Functionele vraag/ruimteverwarming'] = float("nan")
+    df_output.loc[woningen_met_onbekende_woningkenmerken,'Functionele vraag/Totaal'] = 0
+
     return df_output
 
 def bereken_huishoudgrootte(df_output, datatabel_1, datatabel_2):
@@ -139,7 +166,6 @@ def bereken_huishoudgrootte(df_output, datatabel_1, datatabel_2):
     huishoudgrootte_1 = res['Woningkenmerken/oppervlakte'] * res['RE_OA_a_1'] + res['RE_OA_b_1']
     huishoudgrootte_2 = res['Woningkenmerken/oppervlakte'] * res['RE_OA_a_2'] + res['RE_OA_b_2']
     
-    # Misschien ipv fillna() populatie splitten op wel of geen label, zie functionele vraag ruimteverwarming.
     res['Huishoudgrootte'] = huishoudgrootte_1
     res['Huishoudgrootte'] = res['Huishoudgrootte'].fillna(huishoudgrootte_2)
     res['Huishoudgrootte'] = res['Huishoudgrootte'].round(0)
@@ -192,18 +218,16 @@ def bereken_functionele_vraag_ruimteverwarming(df_output, datatabel_1a, datatabe
     df_output_overig_met_label        = df_output[(df_output['Woningkenmerken/woningtype'] != 1) & (df_output['Woningkenmerken/schillabel'] != 'x')]
     df_output_overig_zonder_label     = df_output[(df_output['Woningkenmerken/woningtype'] != 1) & (df_output['Woningkenmerken/schillabel'] == 'x')]
     df_output_zonder_label = pd.concat([df_output_vrijstaand_zonder_label,df_output_overig_zonder_label]).sort_index()
-    
+
     res_vrijstaand_met_label = df_output_vrijstaand_met_label.merge(datatabel_1b, how='left', left_on=['Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/eigendom', 'Woningkenmerken/schillabel'], right_on=['W', 'B', 'E', 'S'])
     res_overig_met_label     = df_output_overig_met_label.merge(    datatabel_1a, how='left', left_on=['Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/eigendom', 'Woningkenmerken/schillabel'], right_on=['W', 'B', 'E', 'S'])
     res_zonder_label         = df_output_zonder_label.merge(        datatabel_2,  how='left', left_on=['Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/eigendom'], right_on=['W', 'B', 'E'])
-    
+
     res_vrijstaand_met_label['functionele vraag ruimteverwarming'] = res_vrijstaand_met_label['Woningkenmerken/oppervlakte'] * res_vrijstaand_met_label['RE_FO_a_WBE [m3 aardgas]'] + res_vrijstaand_met_label['RE_FO_b_WBSE [m3 aardgas]']
     res_overig_met_label['functionele vraag ruimteverwarming']     = res_overig_met_label['Woningkenmerken/oppervlakte'] * res_overig_met_label['RE_FO_a_WBE [m3 aardgas]'] + res_overig_met_label['RE_FO_b_WBSE [m3 aardgas]']
     res_zonder_label['functionele vraag ruimteverwarming']         = res_zonder_label['Woningkenmerken/oppervlakte'] * res_zonder_label['RE_FO_a_WBE [m3 aardgas]'] + res_zonder_label['RE_FO_b_WBE [m3 aardgas]']
-
     res = pd.concat([res_vrijstaand_met_label, res_overig_met_label, res_zonder_label], ignore_index=True)
     res = res.loc[:,['Woning/vbo_id', 'functionele vraag ruimteverwarming']]
-
     df_output = df_output.merge(res, how='left', on=['Woning/vbo_id'])
 
     df_output['functionele vraag ruimteverwarming'] = df_output['functionele vraag ruimteverwarming'] * df_output['Functionele vraag/Lokale praktijkfactor'] * df_output['Regionale klimaatcorrectie/regionale klimaatcorrectie'] * constanten_dict['onderwaarde_energieinhoud_aardgas_m3_naar_GJ']
@@ -250,16 +274,7 @@ def bepaal_installatiecode(df_gemeentedata, datatabel):
         
     return res.loc[:, 'code']
 
-def bereken_functionele_vraag(df_output, benodigde_woningkenmerken):
 
-    df_output['Aantal bewoners/Aantal bewoners']    = bereken_huishoudgrootte(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_aantal_bewoners_populatie_1a_1b'], brondata_dict['Kentallen_aantal_bewoners_populatie_2'])
-    df_output['Functionele vraag/koken']            = bereken_functionele_vraag_koken(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_koken'])
-    df_output['Functionele vraag/warm tapwater']    = bereken_functionele_vraag_warm_tapwater(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_warm_tapwater'])
-    df_output['Functionele vraag/ruimteverwarming'] = bereken_functionele_vraag_ruimteverwarming(df_output.loc[:,benodigde_woningkenmerken], brondata_dict['Kentallen_ruimteverwarming_populatie_1a'], brondata_dict['Kentallen_ruimteverwarming_populatie_1b'], brondata_dict['Kentallen_ruimteverwarming_populatie_2'])
-    df_output['Functionele vraag/Totaal']           = df_output['Functionele vraag/koken'] + df_output['Functionele vraag/warm tapwater'] + df_output['Functionele vraag/ruimteverwarming']  
-    # Predictieinterval laat ik nog even. Eerst uitleg van Boris en lezen van documentatie
-
-    return df_output
 
 def bepaal_installatie_parameters(df_output, datatabel_installatiecodes, datatabel_ruimteverwarming, datatabel_warm_tapwater, datatabel_koken):
     '''
@@ -309,8 +324,8 @@ def bereken_metervragen(df_output, installatie_parameters):
     # Koken
     benodigde_variabelen_df_output_koken = ['Woning/vbo_id','Functionele vraag/koken']
     benodigde_variabelen_installatie_parameters_koken = ['Woning/vbo_id','SPF_KK', 'Input_name_KK']
-    df_input_metervraag_warm_koken = df_output[benodigde_variabelen_df_output_koken].merge(installatie_parameters[benodigde_variabelen_installatie_parameters_koken], on='Woning/vbo_id')
-    metervragen_koken = bereken_metervraag_koken(df_input_metervraag_warm_koken)
+    df_input_metervraag_koken = df_output[benodigde_variabelen_df_output_koken].merge(installatie_parameters[benodigde_variabelen_installatie_parameters_koken], on='Woning/vbo_id')
+    metervragen_koken = bereken_metervraag_koken(df_input_metervraag_koken)
     df_output = merge_metervraag_in_df_ouput(df_output, metervragen_koken)
 
     # Warm tapwater
@@ -389,7 +404,6 @@ def bereken_metervraag_ruimteverwarming(df_input):
     conditions = [    'gas', 'elektriciteit',      'geen', 'waterstof', 'biomassa', 'olie']
     values     = ['aardgas', 'elektriciteit', 'warmtenet', 'waterstof', 'biomassa', 'olie']
 
-    #print(installatie_parameters[installatie_parameters['Input_name_RV_b'] == 'biomassa'])
     for val, cond in enumerate(conditions):
         metervraag_ruimteverwarming.loc[df_input['Input_name_RV_b'] == cond, f'Metervraag {values[val]}/ruimteverwarming basis'] = metervraag_basis
         metervraag_ruimteverwarming.loc[df_input['Input_name_RV_p'] == cond, f'Metervraag {values[val]}/ruimteverwarming piek'] = metervraag_piek
@@ -463,6 +477,20 @@ def invoegen_installatie_parameters(df_output, installatie_parameters):
     
     return df_output
 
+def downcast(df):
+    df.info(memory_usage = "deep")
+
+    ## downcasting loop
+    for column in df:
+        if df[column].dtype == 'float64':
+            df[column]=pd.to_numeric(df[column], downcast='float')
+        if df[column].dtype == 'int64':
+            df[column]=pd.to_numeric(df[column], downcast='integer')
+    
+    df.info(memory_usage = "deep")
+
+    return df
+
 def wegschrijven_naar_csv(df_output, path, GM_code):
     '''
     Doet laatste aanpassing nodig voor wegschrijven en schrijft daaran df_output weg als .csv 
@@ -473,10 +501,13 @@ def wegschrijven_naar_csv(df_output, path, GM_code):
     if outputfolder_exists == False:
         os.makedirs(output_path)
 
-    df_output = afronden_voor_output(df_output)
     if behoud_nullen_excel_parameter == True:
         df_output = behoud_leading_zeroes_excel(df_output)
-    df_output.to_csv(os.path.join(output_path, f'{GM_code}.csv'), sep=';')
+    
+    if wegschrijven_per_gemeente_parameter == True:
+        wegschrijven_per_gemeente(df_output, output_path)
+    else:
+        wegschrijven_in_een_bestand(df_output, output_path, GM_code)
 
 def afronden_voor_output(df_output):
     '''
@@ -500,6 +531,27 @@ def behoud_leading_zeroes_excel(df_output):
     
     return df_output
 
+def wegschrijven_per_gemeente(df_output, output_path):
+    '''
+    Maakt voor iedere gemeente een aparte csv  met output.
+    '''
+    for gemeentecode in df_output['Regio/gemeente'].unique():
+        df_gemeente = df_output[df_output['Regio/gemeente'] == gemeentecode].copy()
+        
+        if behoud_nullen_excel_parameter == False:
+            gemeentecode_name = gemeentecode
+        elif behoud_nullen_excel_parameter == True:
+            gemeentecode_name = int(re.findall(r'\d+', gemeentecode)[0])
+        gemeentecode_name = str(gemeentecode_name).zfill(4)
+
+        df_gemeente.to_csv(os.path.join(output_path, f'GM{gemeentecode_name}.csv'), sep=';', chunksize=1000)
+  
+def wegschrijven_in_een_bestand(df_output, output_path, GM_code):
+    gemeentecode_name = '_'.join(GM_code)
+    
+    df_output.to_csv(os.path.join(output_path, f'{gemeentecode_name}.csv'), sep=';', chunksize=1000)
+
+
 def get_keys(dictionary):
     '''
     Maakt lijst met strings van nested dictionary
@@ -516,17 +568,20 @@ def get_keys(dictionary):
             result.append(key)
             
     return result    
-
+#%%
 if __name__ == "__main__":
     start_time = time.time()
     
     path = os.getcwd()
-    GM_codes = ['GM0088'] # Mogelijkheid tot opgeven meerdere gemeentecodes in lijst. gebruik ['alle_inputdata'] voor alle gemeentes in inputadata map.
-    behoud_nullen_excel_parameter = True # Wanneer excel de output inleest verwdijnen de leading zeros bij de geemntedoce en de wijkcode. Met deze parameter blijven deze behouden, als maken ze de csv voor andere toepassingen minder bruikbaar.
+    GM_codes = ['alle_inputdata'] # Mogelijkheid tot opgeven meerdere gemeentecodes in lijst. gebruik ['alle_inputdata'] voor alle gemeentes in inputadata map.
+    behoud_nullen_excel_parameter = False # Wanneer excel de output inleest verwdijnen de leading zeros bij de gemeentedoce en de wijkcode. Met deze parameter blijven deze behouden, al maken ze de csv voor andere toepassingen minder bruikbaar.
+    wegschrijven_per_gemeente_parameter = False # Wanneer True wordt voor iedere gemeente een aparte output .csv gemaakt. Als False, dan alle output in een .csv
     
     # Inlezen data
     df_gemeentedata_input = inlezen_gemeentedata(path, GM_codes)
     brondata_dict         = inlezen_brondata(path)
+    
+    df_gemeentedata_input = datavoorbereiding_niet_ingevulde_velden(df_gemeentedata_input)
     constanten_dict       = definieer_constanten()
     data_ingelezen_time = time.time()
     print('Data ingelezen. Tijdsduur:', round(data_ingelezen_time - start_time,2) ,'s')
@@ -535,6 +590,8 @@ if __name__ == "__main__":
     output_columns_list = get_keys(output_variabelen_dict)
     df_output = instantieer_output_dataframe(output_columns_list)
     df_output = overnemen_basisdata(df_gemeentedata_input, df_output)
+    df_output['Installatietype/installatiecode'] = bepaal_installatiecode(df_gemeentedata_input, brondata_dict['Aannames_installatiecodes_met_bijbehorende_installatietypen'])
+    del df_gemeentedata_input
 
     # Functionele vraag
     benodigde_woningkenmerken_functionele_vraag = ['Woning/vbo_id', 'Woningkenmerken/oppervlakte','Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/bouwjaar', 'Woningkenmerken/eigendom', 'Woningkenmerken/schillabel', 'Aantal bewoners/Aantal bewoners', 'Functionele vraag/Lokale praktijkfactor', 'Regionale klimaatcorrectie/regionale klimaatcorrectie']
@@ -544,7 +601,6 @@ if __name__ == "__main__":
 
     # Installaties
     benodigde_woningkenmerken_installaties = ['Woning/vbo_id','Installatietype/installatiecode','Woningkenmerken/schillabel']
-    df_output['Installatietype/installatiecode']             = bepaal_installatiecode(df_gemeentedata_input, brondata_dict['Aannames_installatiecodes_met_bijbehorende_installatietypen'])
     installatie_parameters = bepaal_installatie_parameters(df_output[benodigde_woningkenmerken_installaties], brondata_dict['Aannames_installatiecodes_met_bijbehorende_installatietypen'], brondata_dict['Aannames_installaties_voor_ruimteverwarming'], brondata_dict['Aannames_installaties_voor_warm_tapwater'], brondata_dict['Aannames_installaties_voor_koken'])
 
     # Metervragen
@@ -554,7 +610,7 @@ if __name__ == "__main__":
     print('Metervragen berekend. Tijdsduur:', round(metervraag_berekend_time - functionele_vraag_berekend_time,2) ,'s')
     
     # Invoegen installatieparameters
-    installatieparamters_hernoeming_dict = {'Woning/vbo_id' : 'Woning/vbo_id',
+    installatieparameters_hernoeming_dict = {'Woning/vbo_id' : 'Woning/vbo_id',
                                             'P_vol_TW_b'    : 'Installatietype/Warm tapwater aandeel basis',
                                             'P_vol_RV_b'    : 'Installatietype/Ruimteverwarming aandeel basis',
                                             'SPF_KK'        : 'Installatie-efficientie/koken',
@@ -562,20 +618,17 @@ if __name__ == "__main__":
                                             'SPF_p_TW_p'    : 'Installatie-efficientie/warm tapwater piek',
                                             'SPF_b_RV_b'    : 'Installatie-efficientie/ruimteverwarming basis',
                                             'SPF_p_RV_p'    : 'Installatie-efficientie/ruimteverwarming piek'}
-    df_output = invoegen_installatie_parameters(df_output, installatie_parameters[installatieparamters_hernoeming_dict.keys()].rename(columns=installatieparamters_hernoeming_dict))
-
+    df_output = invoegen_installatie_parameters(df_output, installatie_parameters[installatieparameters_hernoeming_dict.keys()].rename(columns=installatieparameters_hernoeming_dict))
+    #%%
     # Klaar maken voor output en wegschrijven naar csv
+    df_output = afronden_voor_output(df_output)
+    df_output = downcast(df_output)
     wegschrijven_naar_csv(df_output, path, GM_codes)
     einde_time = time.time()
     print('Data weggeschreven. Totale Tijdsduur:', round(einde_time - start_time,2) ,'s')
+    
+    
 
-
-    
-    
-    
-    
-    
-    
     
     
     
