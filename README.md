@@ -14,7 +14,10 @@ Voeg in de map 'gemeente_inputdata' de databestanden voor de gemeenten toe. Deze
 
 Het model biedt een aantal opties aan voor aanpassing van het gebruik. Deze variabelen zijn in het script rekenregels.py aan te passen.
 
-- Met de variabele 'GM_codes' is aan te passen welke gemeente(n) meegenomen worden. Door 'alle_inputdata' in te vullen worden alle databestanden in de map 'gemeente_inputdata' gebruikt. 
+- Met de variabele 'GM_codes' is aan te passen welke gemeente(n) meegenomen worden.
+    - Een enkele gemeente kan worden doorgerekend door de gemeentecode van die gemeente als string binnen de lijst (de blokhaken) in te voeren.
+    - Meerdere gemeentes kunnen worden doorgerekend door de bijbehorende gemeentecodes als lijst van strings in te voeren, dat wil zeggen binnen de blokhaken, gescheiden door komma's, met enkele aanhalingstekens om iedere gemeentecode.
+    - Door enkel 'alle_inputdata' in de lijst in te vullen, worden alle databestanden in de map 'gemeente_inputdata' gebruikt voor de doorrekening. 
 - Met de variabele 'behoud_nullen_excel_parameter' is aan te passen of de 'leading zeroes', de getallen nul  vooraan de gemeentecode en wijkcode behouden blijven wanneer de output geopend wordt in excel. Deze parameter staat standaard op 'False', omdat deze de output lastiger te gerbuiken maakt voor verdere bewerkingen.
 - Met de variabele 'wegschrijven_per_gemeente_parameter' Is aan te passen of voor elke gemeente een apart outputbestand gemaakt wordt, of dat alle resultaten in één enkel outputbestand wordne weggeschreven. Houdt er rekening mee dat het wegscrijven van veel resultaten in één bestand lang kan duren. Dit is een verbeterpunt in het model. 
     
