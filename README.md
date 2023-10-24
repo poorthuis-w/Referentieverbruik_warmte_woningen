@@ -12,8 +12,12 @@ Het model gebruikt de packages [numpy](https://numpy.org/) en [pandas](https://p
 
 Voeg in de map 'gemeente_inputdata' de databestanden voor de gemeenten toe. Deze zijn te vinden in het [PBL dataportaal referentieverbuik warmte woningen](https://dataportaal.pbl.nl/downloads/VIVET/Referentieverbruik_warmte/). In deze bestanden kunnen aanpassingen worden gedaan als er meer gedetaileerde informatie rondom de energetische kwaliteit van de betreffende woningen beschikbaar is. 
 
-In het bestand 'rekenregels.py' is met de variabele 'GM_codes' aan te passen welke gemeente(n) meegenomen worden. Door 'alle_inputdata' in te vullen worden alle databestanden in de map 'gemeente_inputdata' gebruikt. 
+Het model biedt een aantal opties aan voor aanpassing van het gebruik. Deze variabelen zijn in het script rekenregels.py aan te passen.
 
+- Met de variabele 'GM_codes' is aan te passen welke gemeente(n) meegenomen worden. Door 'alle_inputdata' in te vullen worden alle databestanden in de map 'gemeente_inputdata' gebruikt. 
+- Met de variabele 'behoud_nullen_excel_parameter' is aan te passen of de 'leading zeroes', de getallen nul  vooraan de gemeentecode en wijkcode behouden blijven wanneer de output geopend wordt in excel. Deze parameter staat standaard op 'False', omdat deze de output lastiger te gerbuiken maakt voor verdere bewerkingen.
+- Met de variabele 'wegschrijven_per_gemeente_parameter' Is aan te passen of voor elke gemeente een apart outputbestand gemaakt wordt, of dat alle resultaten in één enkel outputbestand wordne weggeschreven. Houdt er rekening mee dat het wegscrijven van veel resultaten in één bestand lang kan duren. Dit is een verbeterpunt in het model. 
+    
 Het bestand outputvariabelen.py wordt gebruikt om de structuur van de output dataframe, en daarmee de output .csv, in te stellen. Tevens zijn daar ter referentie de eenheden van de verschillende variabelen te vinden.
 
 De .csv's in de map datatabellen zijn kentallen overgenomen uit de gemeentebestanden. Deze waarden worden gebruikt in de rekenregels om de uitkomsten van de gemeentebestande  te reproduceren.
