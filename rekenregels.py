@@ -605,7 +605,7 @@ if __name__ == "__main__":
     df_output = instantieer_output_dataframe(output_columns_list)
     df_output = overnemen_basisdata(df_gemeentedata_input, df_output)
     df_output['Installatietype/installatiecode'] = bepaal_installatiecode(df_gemeentedata_input, brondata_dict['Aannames_installatiecodes_met_bijbehorende_installatietypen'])
-   # del df_gemeentedata_input
+    del df_gemeentedata_input
 
     # Functionele vraag
     benodigde_woningkenmerken_functionele_vraag = ['Woning/vbo_id', 'Woningkenmerken/oppervlakte','Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/bouwjaar', 'Woningkenmerken/eigendom', 'Woningkenmerken/schillabel', 'Aantal bewoners/Aantal bewoners', 'Functionele vraag/Lokale praktijkfactor', 'Regionale klimaatcorrectie/regionale klimaatcorrectie']
