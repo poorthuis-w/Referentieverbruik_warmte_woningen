@@ -38,12 +38,12 @@ def inlezen_gemeentedata(path, GM_codes):
             df_gemeente = pd.read_csv(gemeentebestand, sep=',') 
             df = pd.concat([df, df_gemeente])
     else:
-        input_file = f'tabblad_Data_gemeente_{GM_codes[0]}.csv'
+        input_file = f'Data_{GM_codes[0]}.csv'
         kolommen = pd.read_csv(os.path.join(path, 'gemeente_inputdata', input_file), sep=',').columns
         df = pd.DataFrame(columns=kolommen)
         
         for gemeente_code in GM_codes:
-            input_file = f'tabblad_Data_gemeente_{gemeente_code}.csv'
+            input_file = f'Data_{gemeente_code}.csv'
             df_gemeente = pd.read_csv(os.path.join(path, 'gemeente_inputdata', input_file), sep=',') 
             df = pd.concat([df, df_gemeente])
     
@@ -206,8 +206,9 @@ def bereken_functionele_vraag_warm_tapwater(df_output, datatabel_tapwater):
 
     res = df_output.merge(datatabel_tapwater, how='left', left_on=['TNO_oppervlakteklasse_code', 'Aantal bewoners/Aantal bewoners'], right_on=['Oppervlakteklasse TNO code', 'Gezinsgrootte'])
     
-    res['functionele vraag tapwater basis'] = res['gasverbruik warm water (m3)'] * constanten_dict['onderwaarde_energieinhoud_aardgas_m3_naar_GJ'] * (1-P_vol_Hr) * SPF_p_Hr
-    res['functionele vraag tapwater piek'] = res['gasverbruik warm water (m3)'] * constanten_dict['onderwaarde_energieinhoud_aardgas_m3_naar_GJ'] * P_vol_Hr * SPF_b_Hr
+    res['functionele vraag tapwater basis'] = res['gasverbruik warm water (m3)'] * constanten_dict['onderwaarde_energieinhoud_aardgas_m3_naar_GJ'] * P_vol_Hr * SPF_b_Hr
+    res['functionele vraag tapwater piek'] = res['gasverbruik warm water (m3)'] * constanten_dict['onderwaarde_energieinhoud_aardgas_m3_naar_GJ'] * (1-P_vol_Hr) * SPF_p_Hr
+
     res['functionele vraag tapwater'] = res['functionele vraag tapwater basis']  + res['functionele vraag tapwater piek']
     res['functionele vraag tapwater'] = res['functionele vraag tapwater'] * res['Functionele vraag/Lokale praktijkfactor']
     
@@ -273,7 +274,7 @@ def categoriseer_oppervlakteklasse_TNO(oppervlakte):
 
 def bepaal_installatiecode(df_gemeentedata, datatabel):
     '''
-    Bepaalt installatiecode op basis van opgegeven installaties in invoerbestand.
+   Bepaalt installatiecode op basis van opgegeven installaties in invoerbestand.
     '''
     res = df_gemeentedata.merge(datatabel, how='left', left_on=['Inst_RVb', 'Inst_RVp', 'Inst_TWb', 'Inst_TWp', 'Koken'], right_on=['ruimteverwarming (basis)', 'ruimteverwarming (piek)', 'warm tapwater(basis)', 'warm tapwater (piek)', 'koken'])
         
@@ -357,9 +358,9 @@ def bereken_metervragen(df_output, installatie_parameters):
     return df_output
 
 def bereken_metervraag_koken(df_input):
-    '''	
+    '''        
     Berekent de metervraag naar koken voor alle relevante energiedragers
-    '''	
+    '''        
     metervraag_koken = pd.DataFrame()
     metervraag_koken['Woning/vbo_id'] = df_input['Woning/vbo_id']
     
@@ -376,9 +377,9 @@ def bereken_metervraag_koken(df_input):
     return metervraag_koken
 
 def bereken_metervraag_warm_tapwater(df_input):
-    '''	
+    '''        
     Berekent de metervraag naar warm tapwater voor alle relevante energiedragers
-    '''	
+    '''        
     metervraag_warm_tapwater = pd.DataFrame()
     metervraag_warm_tapwater['Woning/vbo_id'] = df_input['Woning/vbo_id']
 
@@ -397,9 +398,9 @@ def bereken_metervraag_warm_tapwater(df_input):
     return metervraag_warm_tapwater
 
 def bereken_metervraag_ruimteverwarming(df_input):
-    '''	
+    '''        
     Berekent de metervraag naar ruimteverwarming voor alle relevante energiedragers
-    '''	
+    '''        
     metervraag_ruimteverwarming = pd.DataFrame()
     metervraag_ruimteverwarming['Woning/vbo_id'] = df_input['Woning/vbo_id']
     
@@ -418,10 +419,10 @@ def bereken_metervraag_ruimteverwarming(df_input):
     return metervraag_ruimteverwarming
 
 def bereken_metervraag_hulpenergie(df_input):
-    '''	
+    '''        
     Berekent hulpvraag obv functinele vraag naar ruimteverwarming, woningtype (eengezins/meergezins) en installaties voor ruimteverwarming en warm tapwater.
     Op het moment wordt voor iedere woning zowel de meergezisn als de eengezinshulpvraag voor warm tapwater berekend. Een effciencyslag is om dit selectiever te doen.
-    '''	
+    '''        
     metervraag_hulpenergie = pd.DataFrame()
     metervraag_hulpenergie['Woning/vbo_id'] = df_input['Woning/vbo_id']
     metervraag_hulpenergie['Woningkenmerken/woningtype'] = df_input['Woningkenmerken/woningtype']
@@ -442,14 +443,14 @@ def bereken_metervraag_hulpenergie(df_input):
     return metervraag_hulpenergie
 
 def merge_metervraag_in_df_ouput(df_output, metervraag):
-    '''	
+    '''        
     Zet uitkomsten van berekening metervragen op juiste plek in df_output ipv achteraan
-    '''	
+    '''        
     df_output = df_output.merge(metervraag, how='left', on='Woning/vbo_id', suffixes=('', '_y'))
     for col in metervraag:
         if 'vbo' not in col:
-            df_output[col] = df_output[f'{col}'].fillna(df_output[f'{col}_y'])
-            df_output.astype({f'{col}' : 'float64'})
+           df_output[col] = df_output[f'{col}'].fillna(df_output[f'{col}_y'])
+           df_output.astype({f'{col}' : 'float64'})
     df_output.drop(df_output.filter(regex='_y$').columns, axis=1, inplace=True)
     
     return df_output
@@ -513,17 +514,22 @@ def wegschrijven_naar_csv(df_output, path, GM_code):
     else:
         wegschrijven_in_een_bestand(df_output, output_path, GM_code)
 
-def afronden_voor_output(df_output):
+def afronden_voor_output(df_output, aantal_decimalen_af_te_ronden):
     '''
     Rondt kolommen met functionele vraag, metervraag en de regionale klimaatcorrectie af. 
     '''
     kolommen_af_te_ronden_list = ['Functionele vraag', 'Metervraag', 'klimaatcorrectie']
     kolommen_af_te_ronden_pattern = '|'.join(kolommen_af_te_ronden_list)
     kolommen_af_te_ronden = df_output.filter(regex=kolommen_af_te_ronden_pattern).columns
+
     for col in kolommen_af_te_ronden:    
         df_output.loc[:, col] = df_output.astype({f'{col}' : 'float64'})
-    df_output[kolommen_af_te_ronden] = df_output[kolommen_af_te_ronden].round(1)
+        
+    kolommen_af_te_ronden = kolommen_af_te_ronden.drop(labels=['Functionele vraag/Lokale praktijkfactor','Regionale klimaatcorrectie/regionale klimaatcorrectie'])
 
+    if type(aantal_decimalen_af_te_ronden) == int:
+        df_output[kolommen_af_te_ronden] = df_output[kolommen_af_te_ronden].round(aantal_decimalen_af_te_ronden)
+    
     return df_output
 
 def behoud_leading_zeroes_excel(df_output):
@@ -580,7 +586,8 @@ if __name__ == "__main__":
     start_time = time.time()
     
     path = os.getcwd()
-    GM_codes = ['alle_inputdata'] # Mogelijkheid tot opgeven meerdere gemeentecodes in lijst. gebruik ['alle_inputdata'] voor alle gemeentes in inputadata map.
+    GM_codes = ['GM0088'] # Mogelijkheid tot opgeven meerdere gemeentecodes in lijst. gebruik ['alle_inputdata'] voor alle gemeentes in inputadata map.
+    decimalen_af_te_ronden = 2 # Geeft aan op hoe veel decimalen de functionele en metervragen worden afgerond. Als er geen getal staat wordt er niet afgerond
     behoud_nullen_excel_parameter = False # Wanneer excel de output inleest verwdijnen de leading zeros bij de gemeentedoce en de wijkcode. Met deze parameter blijven deze behouden, al maken ze de csv voor andere toepassingen minder bruikbaar.
     wegschrijven_per_gemeente_parameter = False # Wanneer True wordt voor iedere gemeente een aparte output .csv gemaakt. Als False, dan alle output in een .csv
     
@@ -598,7 +605,7 @@ if __name__ == "__main__":
     df_output = instantieer_output_dataframe(output_columns_list)
     df_output = overnemen_basisdata(df_gemeentedata_input, df_output)
     df_output['Installatietype/installatiecode'] = bepaal_installatiecode(df_gemeentedata_input, brondata_dict['Aannames_installatiecodes_met_bijbehorende_installatietypen'])
-    del df_gemeentedata_input
+   # del df_gemeentedata_input
 
     # Functionele vraag
     benodigde_woningkenmerken_functionele_vraag = ['Woning/vbo_id', 'Woningkenmerken/oppervlakte','Woningkenmerken/woningtype', 'Woningkenmerken/bouwperiode', 'Woningkenmerken/bouwjaar', 'Woningkenmerken/eigendom', 'Woningkenmerken/schillabel', 'Aantal bewoners/Aantal bewoners', 'Functionele vraag/Lokale praktijkfactor', 'Regionale klimaatcorrectie/regionale klimaatcorrectie']
@@ -628,21 +635,9 @@ if __name__ == "__main__":
     df_output = invoegen_installatie_parameters(df_output, installatie_parameters[installatieparameters_hernoeming_dict.keys()].rename(columns=installatieparameters_hernoeming_dict))
     #%%
     # Klaar maken voor output en wegschrijven naar csv
-    df_output = afronden_voor_output(df_output)
+    df_output = afronden_voor_output(df_output, decimalen_af_te_ronden)
     df_output = downcast(df_output)
     wegschrijven_naar_csv(df_output, path, GM_codes)
     einde_time = time.time()
-    print('Data weggeschreven. Totale Tijdsduur:', round(einde_time - start_time,2) ,'s')
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    print('Data weggeschreven. Tijdsduur:', round(einde_time - metervraag_berekend_time,2) ,'s')
+    print('Eind script. Totale Tijdsduur:', round(einde_time - start_time,2) ,'s')
